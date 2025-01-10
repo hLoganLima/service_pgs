@@ -1,0 +1,88 @@
+2025-01-10 15:01:01,878 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:01:01,878 [INFO] Serviço iniciado. Atualização programada a cada 1 minutos.
+2025-01-10 15:02:01,938 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:02:01,938 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:02:01,946 [INFO] Conectando ao Supabase.
+2025-01-10 15:02:02,177 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:02:02,189 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:02:02,189 [INFO] Sincronizando clientes.
+2025-01-10 15:02:02,189 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:03:02,220 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:03:02,220 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:03:02,220 [INFO] Conectando ao Supabase.
+2025-01-10 15:03:02,397 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:03:02,413 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:03:02,413 [INFO] Sincronizando clientes.
+2025-01-10 15:03:02,413 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:04:02,454 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:04:02,454 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:04:02,454 [INFO] Conectando ao Supabase.
+2025-01-10 15:04:02,650 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:04:02,654 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:04:02,654 [INFO] Sincronizando clientes.
+2025-01-10 15:04:02,654 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:05:02,699 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:05:02,699 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:05:02,699 [INFO] Conectando ao Supabase.
+2025-01-10 15:05:02,922 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:05:02,970 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:05:02,970 [INFO] Sincronizando clientes.
+2025-01-10 15:05:02,970 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:06:03,006 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:06:03,007 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:06:03,008 [INFO] Conectando ao Supabase.
+2025-01-10 15:06:03,220 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:06:03,220 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:06:03,220 [INFO] Sincronizando clientes.
+2025-01-10 15:06:03,220 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:07:03,260 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:07:03,260 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:07:03,260 [INFO] Conectando ao Supabase.
+2025-01-10 15:07:03,475 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:07:03,490 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:07:03,491 [INFO] Sincronizando clientes.
+2025-01-10 15:07:03,491 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:08:03,520 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:08:03,522 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:08:03,524 [INFO] Conectando ao Supabase.
+2025-01-10 15:08:03,823 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:08:03,831 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:08:03,831 [INFO] Sincronizando clientes.
+2025-01-10 15:08:03,831 [ERROR] Erro durante a sincronização: 'id_siger_cliente'
+2025-01-10 15:08:25,053 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:08:25,053 [INFO] Serviço iniciado. Atualização programada a cada 1 minutos.
+2025-01-10 15:09:25,081 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:09:25,081 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:09:25,082 [INFO] Conectando ao Supabase.
+2025-01-10 15:09:25,352 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:09:25,375 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:09:25,375 [INFO] Sincronizando clientes.
+2025-01-10 15:09:25,376 [ERROR] Erro durante a sincronização: 'cód'
+2025-01-10 15:10:25,401 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:10:25,401 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:10:25,401 [INFO] Conectando ao Supabase.
+2025-01-10 15:10:25,582 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:10:25,596 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:10:25,596 [INFO] Sincronizando clientes.
+2025-01-10 15:10:25,596 [ERROR] Erro durante a sincronização: 'cód'
+2025-01-10 15:11:25,632 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:11:25,632 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:11:25,632 [INFO] Conectando ao Supabase.
+2025-01-10 15:11:25,826 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:11:25,830 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:11:25,830 [INFO] Sincronizando clientes.
+2025-01-10 15:11:25,830 [ERROR] Erro durante a sincronização: 'cód'
+2025-01-10 15:12:25,866 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:12:25,866 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:12:25,866 [INFO] Conectando ao Supabase.
+2025-01-10 15:12:26,060 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:12:26,090 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:12:26,090 [INFO] Sincronizando clientes.
+2025-01-10 15:12:26,090 [ERROR] Erro durante a sincronização: 'cód'
+2025-01-10 15:13:26,130 [INFO] Iniciando sincronização dos dados.
+2025-01-10 15:13:26,131 [INFO] Carregando arquivo de configuração.
+2025-01-10 15:13:26,131 [INFO] Conectando ao Supabase.
+2025-01-10 15:13:26,316 [INFO] Lendo dados do arquivo CSV: C:/Users/adria/Downloads/contratos pgs.csv
+2025-01-10 15:13:26,316 [INFO] Carregados 4554 registros do CSV.
+2025-01-10 15:13:26,316 [INFO] Sincronizando clientes.
+2025-01-10 15:13:26,316 [ERROR] Erro durante a sincronização: 'cód'
