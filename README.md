@@ -1,7 +1,3 @@
-Segue um exemplo de um **README.md** bem estruturado para o projeto:
-
----
-
 # **Sincronização de Dados CSV com Supabase**
 
 Este projeto implementa um serviço em Python para sincronizar dados de um arquivo CSV com tabelas em um banco de dados Supabase. Ele foi projetado para evitar duplicação de dados e permite a configuração dinâmica de caminho do arquivo, credenciais do banco e intervalo de sincronização.
