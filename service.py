@@ -2,13 +2,24 @@ import csv
 import json
 import logging
 from datetime import datetime
-from supabase import create_client, Client
+from supabase import create_client
 import schedule
 import time
 import chardet
+import os
 
-logging.info(f"Colunas detectadas no CSV: {list(reader.fieldnames)}")
-
+def setup_logging():
+    """Configura o sistema de logging."""
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(os.path.join(log_dir, "service.log")),
+            logging.StreamHandler()
+        ]
+    )
 
 def detect_encoding(file_path):
     """Detecta a codificação do arquivo."""
@@ -17,15 +28,16 @@ def detect_encoding(file_path):
         return result['encoding']
 
 def load_csv_data(csv_path):
-    """Carrega dados do CSV com a codificação correta."""
+    """Carrega os dados do arquivo CSV usando a codificação detectada."""
     try:
-        # Detecta a codificação do arquivo
         encoding = detect_encoding(csv_path)
         logging.info(f"Codificação detectada: {encoding}")
 
-        # Lê o arquivo CSV com a codificação detectada
         with open(csv_path, mode='r', encoding=encoding) as file:
             reader = csv.DictReader(file)
+            if not reader.fieldnames:
+                raise ValueError("Nenhuma coluna detectada no CSV.")
+            logging.info(f"Colunas detectadas no CSV: {reader.fieldnames}")
             data = list(reader)
             logging.info(f"Carregados {len(data)} registros do CSV.")
             return data
@@ -33,28 +45,24 @@ def load_csv_data(csv_path):
         logging.error(f"Erro ao carregar dados do CSV: {e}")
         raise
 
-# Configuração do logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("service.log"),
-        logging.StreamHandler()
-    ]
-)
-
-# Função para carregar configurações
 def load_config():
+    """Carrega o arquivo de configuração."""
     logging.info("Carregando arquivo de configuração.")
     try:
-        with open('config.json', 'r') as file:
-            return json.load(file)
+        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        with open(config_path, 'r') as file:
+            config = json.load(file)
+        required_keys = ["supabase_url", "supabase_service_role_key", "csv_file_path", "update_interval_minutes"]
+        for key in required_keys:
+            if key not in config:
+                raise KeyError(f"Chave obrigatória '{key}' ausente no arquivo de configuração.")
+        return config
     except Exception as e:
         logging.error(f"Erro ao carregar config.json: {e}")
         raise
 
-# Função para conectar ao Supabase
 def connect_to_supabase(config):
+    """Conecta ao Supabase usando as configurações fornecidas."""
     logging.info("Conectando ao Supabase.")
     try:
         client = create_client(config["supabase_url"], config["supabase_service_role_key"])
@@ -63,134 +71,84 @@ def connect_to_supabase(config):
         logging.error(f"Erro ao conectar ao Supabase: {e}")
         raise
 
-# Função para carregar dados do CSV
-def load_csv_data(csv_path):
-    logging.info(f"Lendo dados do arquivo CSV: {csv_path}")
-    try:
-        with open(csv_path, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            data = list(reader)
-            logging.info(f"Carregados {len(data)} registros do CSV.")
-            return data
-    except Exception as e:
-        logging.error(f"Erro ao carregar dados do CSV: {e}")
-        raise
-
-# Função para verificar e inserir clientes
-def sync_clientes(supabase, data):
-    """Sincroniza a tabela cliente no Supabase."""
-    logging.info("Sincronizando clientes.")
+def sync_table(supabase, table_name, unique_key, data, transform_func):
+    """Sincroniza uma tabela no Supabase."""
+    logging.info(f"Sincronizando tabela '{table_name}'.")
     for row in data:
-        # Mapear a coluna 'cód' do CSV para 'id_siger_cliente'
-        cliente_data = {
-            "id_siger_cliente": int(row["cód"]),  # Mapeando 'cód' para id_siger_cliente
-            "nome_cliente": row["nome_cliente"],
-            "cnpj": row["cnpj"],
-            "deletado": row.get("deletado", "false").lower() == "true"
-        }
         try:
-            # Verificar se o cliente já existe
-            existing = supabase.table('cliente').select("id_siger_cliente").eq("id_siger_cliente", cliente_data["id_siger_cliente"]).execute()
+            record = transform_func(row)
+            unique_value = record[unique_key]
+            existing = supabase.table(table_name).select(unique_key).eq(unique_key, unique_value).execute()
             if not existing.data:
-                # Inserir novo cliente
-                supabase.table('cliente').insert(cliente_data).execute()
-                logging.info(f"Cliente inserido: {cliente_data}")
+                supabase.table(table_name).insert(record).execute()
+                logging.info(f"Registro inserido na tabela '{table_name}': {record}")
             else:
-                logging.info(f"Cliente já existe: {cliente_data['id_siger_cliente']}")
+                logging.info(f"Registro já existe na tabela '{table_name}': {unique_value}")
         except Exception as e:
-            logging.error(f"Erro ao sincronizar cliente {cliente_data['id_siger_cliente']}: {e}")
+            logging.error(f"Erro ao sincronizar registro na tabela '{table_name}': {e}")
 
-def load_csv_data(csv_path):
-    """Carrega os dados do arquivo CSV usando a codificação detectada."""
-    try:
-        # Detecta a codificação do arquivo
-        encoding = detect_encoding(csv_path)
+def transform_cliente(row):
+    """Transforma uma linha de CSV em dados do cliente."""
+    return {
+        "id_siger_cliente": int(row["Cód"].strip()),
+        "nome_cliente": row.get("Razão social", "").strip(),
+        "cnpj": row.get("CNPJ/CPF", "").strip(),
+        "deletado": row.get("Descr.Sit.item cont.(enumerado)", "").strip().lower() != "ativo"
+    }
 
-        # Lê o arquivo CSV com a codificação detectada
-        with open(csv_path, mode='r', encoding=encoding) as file:
-            reader = csv.DictReader(file)
-            logging.info(f"Colunas detectadas no CSV: {list(reader.fieldnames)}")  # Log para verificar cabeçalhos
-            data = list(reader)
-            logging.info(f"Carregados {len(data)} registros do CSV.")
-            return data
-    except Exception as e:
-        logging.error(f"Erro ao carregar dados do CSV: {e}")
-        raise
+def transform_contrato(row):
+    """Transforma uma linha de CSV em dados do contrato."""
+    return {
+        "id_contrato": int(row["Núm.contrato"].strip()),
+        "id_siger_cliente": int(row["Cód"].strip()),
+        "dt_inic_cont": row.get("Dt.inc.cont", "").strip(),
+        "dt_vig_inic": row.get("Dt.vig.inic", "").strip(),
+        "dt_vig_final": row.get("Dt.vig.final", "2099-01-01").strip(),
+        "deletado": row.get("Descr.Sit.item cont.(enumerado)", "").strip().lower() != "ativo"
+    }
 
-# Função para verificar e inserir contratos
-def sync_contratos(supabase, data):
-    logging.info("Sincronizando contratos.")
-    for row in data:
-        contrato_data = {
-            "id_contrato": int(row["id_contrato"]),
-            "id_siger_cliente": int(row["id_siger_cliente"]),
-            "dt_inic_cont": row["dt_inic_cont"],
-            "dt_vig_inic": row["dt_vig_inic"],
-            "dt_vig_final": row.get("dt_vig_final", "2099-01-01"),
-            "deletado": row.get("deletado", "false").lower() == "true"
-        }
-        try:
-            existing = supabase.table('contrato').select("id_contrato").eq("id_contrato", contrato_data["id_contrato"]).execute()
-            if not existing.data:
-                supabase.table('contrato').insert(contrato_data).execute()
-                logging.info(f"Contrato inserido: {contrato_data}")
-            else:
-                logging.info(f"Contrato já existe: {contrato_data['id_contrato']}")
-        except Exception as e:
-            logging.error(f"Erro ao sincronizar contrato {contrato_data['id_contrato']}: {e}")
+def transform_produto(row):
+    """Transforma uma linha de CSV em dados do produto."""
+    return {
+        "id_siger_item": int(row["Código"].strip()),
+        "nome_produto": row["Desc.item"].strip(),
+        "tipo_produto": row["Descrição"].strip(),
+        "num_serie": row.get("Núm.lote forn", "").strip(),
+        "num_lote": row.get("Núm.lote", "").strip(),
+        "ativo": row.get("Descr.Sit.item cont.(enumerado)", "").strip().lower() == "ativo"
+    }
 
-# Função para verificar e inserir produtos
-def sync_produtos(supabase, data):
-    logging.info("Sincronizando produtos.")
-    for row in data:
-        produto_data = {
-            "id_produto_siger": int(row["id_produto_siger"]),
-            "nome_produto": row["nome_produto"],
-            "tipo_produto": row["tipo_produto"],
-            "id_cliente_siger": int(row["id_cliente_siger"]),
-            "id_contrato": int(row["id_contrato"]),
-            "num_serie": row.get("num_serie"),
-            "num_lote": row.get("num_lote"),
-            "deletado": row.get("deletado", "false").lower() == "true",
-            "ativo": row.get("ativo", "true").lower() == "true"
-        }
-        try:
-            existing = supabase.table('produto').select("id_produto_siger").eq("id_produto_siger", produto_data["id_produto_siger"]).execute()
-            if not existing.data:
-                supabase.table('produto').insert(produto_data).execute()
-                logging.info(f"Produto inserido: {produto_data}")
-            else:
-                logging.info(f"Produto já existe: {produto_data['id_produto_siger']}")
-        except Exception as e:
-            logging.error(f"Erro ao sincronizar produto {produto_data['id_produto_siger']}: {e}")
-
-# Função principal de sincronização
 def sync_data():
+    """Inicia o processo de sincronização de dados."""
     logging.info("Iniciando sincronização dos dados.")
     try:
         config = load_config()
         supabase = connect_to_supabase(config)
         csv_data = load_csv_data(config["csv_file_path"])
-        
-        sync_clientes(supabase, csv_data)
-        sync_contratos(supabase, csv_data)
-        sync_produtos(supabase, csv_data)
 
-        logging.info(f"Sincronização concluída com sucesso às {datetime.now()}")
+        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente)
+        sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato)
+        sync_table(supabase, 'produto', 'id_siger_item', csv_data, transform_produto)
+
+        logging.info(f"Sincronização concluída com sucesso às {datetime.now()}.")
     except Exception as e:
         logging.error(f"Erro durante a sincronização: {e}")
 
-# Agendar execução com base no intervalo configurado
 def start_service():
+    """Inicializa o serviço de sincronização agendado."""
     config = load_config()
     interval = config["update_interval_minutes"]
     logging.info(f"Serviço iniciado. Atualização programada a cada {interval} minutos.")
-    
+
     schedule.every(interval).minutes.do(sync_data)
 
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
+        except Exception as e:
+            logging.error(f"Erro no loop de agendamento: {e}")
         time.sleep(1)
 
 if __name__ == "__main__":
+    setup_logging()
     start_service()
