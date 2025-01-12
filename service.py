@@ -27,16 +27,23 @@ def detect_encoding(file_path):
         result = chardet.detect(f.read())
         return result['encoding']
 
-def load_csv_data(csv_path):
+def load_csv_data(csv_path, required_columns):
     """Carrega os dados do arquivo CSV usando a codificação detectada."""
     try:
         encoding = detect_encoding(csv_path)
         logging.info(f"Codificação detectada: {encoding}")
 
         with open(csv_path, mode='r', encoding=encoding) as file:
-            reader = csv.DictReader(file)
+            reader = csv.DictReader(file, delimiter=';')  # Ajuste para o delimitador correto (;)
+
+            # Verifica se todas as colunas obrigatórias estão presentes
             if not reader.fieldnames:
                 raise ValueError("Nenhuma coluna detectada no CSV.")
+            
+            missing_columns = [col for col in required_columns if col not in reader.fieldnames]
+            if missing_columns:
+                raise ValueError(f"Colunas obrigatórias ausentes no CSV: {missing_columns}")
+
             logging.info(f"Colunas detectadas no CSV: {reader.fieldnames}")
             data = list(reader)
             logging.info(f"Carregados {len(data)} registros do CSV.")
@@ -49,10 +56,10 @@ def load_config():
     """Carrega o arquivo de configuração."""
     logging.info("Carregando arquivo de configuração.")
     try:
-        with open('config.json', 'r') as file:
+        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        with open(config_path, 'r') as file:
             config = json.load(file)
 
-        # Lista de chaves obrigatórias
         required_keys = [
             "supabase_url",
             "supabase_anon_key",
@@ -61,7 +68,6 @@ def load_config():
             "update_interval_minutes"
         ]
 
-        # Verifica se todas as chaves obrigatórias estão presentes
         for key in required_keys:
             if key not in config or not config[key]:
                 raise KeyError(f"Chave obrigatória '{key}' ausente ou vazia no arquivo de configuração.")
@@ -84,7 +90,7 @@ def connect_to_supabase(config):
 def sync_table(supabase, table_name, unique_key, data, transform_func):
     """Sincroniza uma tabela no Supabase."""
     logging.info(f"Sincronizando tabela '{table_name}'.")
-    for row in data:
+    for i, row in enumerate(data, start=1):
         try:
             record = transform_func(row)
             unique_value = record[unique_key]
@@ -94,8 +100,10 @@ def sync_table(supabase, table_name, unique_key, data, transform_func):
                 logging.info(f"Registro inserido na tabela '{table_name}': {record}")
             else:
                 logging.info(f"Registro já existe na tabela '{table_name}': {unique_value}")
+        except KeyError as e:
+            logging.error(f"Erro: Coluna ausente no registro {i}: {e}")
         except Exception as e:
-            logging.error(f"Erro ao sincronizar registro na tabela '{table_name}': {e}")
+            logging.error(f"Erro ao sincronizar registro {i} na tabela '{table_name}': {e}")
 
 def transform_cliente(row):
     """Transforma uma linha de CSV em dados do cliente."""
@@ -120,7 +128,7 @@ def transform_contrato(row):
 def transform_produto(row):
     """Transforma uma linha de CSV em dados do produto."""
     return {
-        "id_siger_item": int(row["Código"].strip()),
+        "id_produto_siger": int(row["Código"].strip()),
         "nome_produto": row["Desc.item"].strip(),
         "tipo_produto": row["Descrição"].strip(),
         "num_serie": row.get("Núm.lote forn", "").strip(),
@@ -134,11 +142,18 @@ def sync_data():
     try:
         config = load_config()
         supabase = connect_to_supabase(config)
-        csv_data = load_csv_data(config["csv_file_path"])
 
-        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente)
+        required_columns = [
+            "Cód", "Razão social", "CNPJ/CPF",  # Cliente
+            "Núm.contrato", "Dt.inc.cont", "Dt.vig.inic", "Dt.vig.final",  # Contrato
+            "Código", "Desc.item", "Descrição"  # Produto
+        ]
+
+        csv_data = load_csv_data(config["csv_file_path"], required_columns)
+
+        sync_table(supabase, 'cliente', 'id_cliente_siger', csv_data, transform_cliente)
         sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato)
-        sync_table(supabase, 'produto', 'id_siger_item', csv_data, transform_produto)
+        sync_table(supabase, 'produto', 'id_produto_siger', csv_data, transform_produto)
 
         logging.info(f"Sincronização concluída com sucesso às {datetime.now()}.")
     except Exception as e:

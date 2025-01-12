@@ -2,6 +2,6 @@
    "supabase_url": "https://yrgxpdcqlkypnxsfozrz.supabase.co",
    "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ3hwZGNxbGt5cG54c2ZvenJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUyMTQxNTAsImV4cCI6MjA1MDc5MDE1MH0.tKTiR2771WIuzVgmbRqE4x-2O6h86JA5Tc_Z3ICmVbg",
    "supabase_service_role_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ3hwZGNxbGt5cG54c2ZvenJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTIxNDE1MCwiZXhwIjoyMDUwNzkwMTUwfQ.NHsTOqebp3XyvqNZ85d43Z7zBPO9ph9pg70nkj4vYmk",
-   "csv_file_path": "C:/Users/Logan Lima/Documents/contratos_pgs.csv",
-   "update_interval_minutes": 1
+   "csv_file_path": "C:/Users/Logan Lima/VS Code Projects/contratos pgs (2).csv",
+   "update_interval_minutes": 6
 }
