@@ -49,13 +49,23 @@ def load_config():
     """Carrega o arquivo de configuração."""
     logging.info("Carregando arquivo de configuração.")
     try:
-        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-        with open(config_path, 'r') as file:
+        with open('config.json', 'r') as file:
             config = json.load(file)
-        required_keys = ["supabase_url", "supabase_service_role_key", "csv_file_path", "update_interval_minutes"]
+
+        # Lista de chaves obrigatórias
+        required_keys = [
+            "supabase_url",
+            "supabase_anon_key",
+            "supabase_service_role_key",
+            "csv_file_path",
+            "update_interval_minutes"
+        ]
+
+        # Verifica se todas as chaves obrigatórias estão presentes
         for key in required_keys:
-            if key not in config:
-                raise KeyError(f"Chave obrigatória '{key}' ausente no arquivo de configuração.")
+            if key not in config or not config[key]:
+                raise KeyError(f"Chave obrigatória '{key}' ausente ou vazia no arquivo de configuração.")
+
         return config
     except Exception as e:
         logging.error(f"Erro ao carregar config.json: {e}")
