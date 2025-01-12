@@ -1,7 +1,7 @@
 import csv
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client
 import schedule
 import time
@@ -87,7 +87,7 @@ def connect_to_supabase(config):
         logging.error(f"Erro ao conectar ao Supabase: {e}")
         raise
 
-def sync_table(supabase, table_name, unique_key, data, transform_func):
+def sync_table(supabase, table_name, unique_key, data, transform_func, error_log):
     """Sincroniza uma tabela no Supabase."""
     logging.info(f"Sincronizando tabela '{table_name}'.")
     for i, row in enumerate(data, start=1):
@@ -101,9 +101,13 @@ def sync_table(supabase, table_name, unique_key, data, transform_func):
             else:
                 logging.info(f"Registro já existe na tabela '{table_name}': {unique_value}")
         except KeyError as e:
-            logging.error(f"Erro: Coluna ausente no registro {i}: {e}")
+            error_message = f"Erro: Coluna ausente no registro {i} ({table_name}): {e}"
+            logging.error(error_message)
+            error_log.append({"index": i, "table": table_name, "error": str(e)})
         except Exception as e:
-            logging.error(f"Erro ao sincronizar registro {i} na tabela '{table_name}': {e}")
+            error_message = f"Erro ao sincronizar registro {i} na tabela '{table_name}': {e}"
+            logging.error(error_message)
+            error_log.append({"index": i, "table": table_name, "error": str(e)})
 
 def transform_cliente(row):
     """Transforma uma linha de CSV em dados do cliente."""
@@ -139,6 +143,9 @@ def transform_produto(row):
 def sync_data():
     """Inicia o processo de sincronização de dados."""
     logging.info("Iniciando sincronização dos dados.")
+    start_time = datetime.now()
+    error_log = []
+
     try:
         config = load_config()
         supabase = connect_to_supabase(config)
@@ -151,13 +158,22 @@ def sync_data():
 
         csv_data = load_csv_data(config["csv_file_path"], required_columns)
 
-        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente)
-        sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato)
-        sync_table(supabase, 'produto', 'id_produto_siger', csv_data, transform_produto)
+        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente, error_log)
+        sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato, error_log)
+        sync_table(supabase, 'produto', 'id_produto_siger', csv_data, transform_produto, error_log)
 
-        logging.info(f"Sincronização concluída com sucesso às {datetime.now()}.")
+        end_time = datetime.now()
+        elapsed_time = str(timedelta(seconds=(end_time - start_time).total_seconds()))
+        logging.info(f"Sincronização concluída com sucesso às {end_time}.")
+        logging.info(f"Tempo total de execução: {elapsed_time}.")
     except Exception as e:
         logging.error(f"Erro durante a sincronização: {e}")
+
+    # Log final dos erros
+    if error_log:
+        logging.error("Resumo dos erros encontrados:")
+        for error in error_log:
+            logging.error(f"Registro {error['index']} na tabela '{error['table']}': {error['error']}")
 
 def start_service():
     """Inicializa o serviço de sincronização agendado."""
