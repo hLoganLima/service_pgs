@@ -151,7 +151,7 @@ def sync_data():
 
         csv_data = load_csv_data(config["csv_file_path"], required_columns)
 
-        sync_table(supabase, 'cliente', 'id_cliente_siger', csv_data, transform_cliente)
+        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente)
         sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato)
         sync_table(supabase, 'produto', 'id_produto_siger', csv_data, transform_produto)
 
