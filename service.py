@@ -7,9 +7,9 @@ import schedule
 import time
 import chardet
 import os
+from collections import defaultdict
 
 def setup_logging():
-    """Configura o sistema de logging."""
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
     logging.basicConfig(
@@ -22,95 +22,92 @@ def setup_logging():
     )
 
 def detect_encoding(file_path):
-    """Detecta a codificação do arquivo."""
     with open(file_path, 'rb') as f:
         result = chardet.detect(f.read())
         return result['encoding']
 
 def load_csv_data(csv_path, required_columns):
-    """Carrega os dados do arquivo CSV usando a codificação detectada."""
-    try:
-        encoding = detect_encoding(csv_path)
-        logging.info(f"Codificação detectada: {encoding}")
+    encoding = detect_encoding(csv_path)
+    logging.info(f"Codificação detectada: {encoding}")
 
-        with open(csv_path, mode='r', encoding=encoding) as file:
-            reader = csv.DictReader(file, delimiter=';')  # Ajuste para o delimitador correto (;)
+    with open(csv_path, mode='r', encoding=encoding) as file:
+        reader = csv.DictReader(file, delimiter=';')
 
-            # Verifica se todas as colunas obrigatórias estão presentes
-            if not reader.fieldnames:
-                raise ValueError("Nenhuma coluna detectada no CSV.")
-            
-            missing_columns = [col for col in required_columns if col not in reader.fieldnames]
-            if missing_columns:
-                raise ValueError(f"Colunas obrigatórias ausentes no CSV: {missing_columns}")
+        if not reader.fieldnames:
+            raise ValueError("Nenhuma coluna detectada no CSV.")
 
-            logging.info(f"Colunas detectadas no CSV: {reader.fieldnames}")
-            data = list(reader)
-            logging.info(f"Carregados {len(data)} registros do CSV.")
-            return data
-    except Exception as e:
-        logging.error(f"Erro ao carregar dados do CSV: {e}")
-        raise
+        missing_columns = [col for col in required_columns if col not in reader.fieldnames]
+        if missing_columns:
+            raise ValueError(f"Colunas obrigatórias ausentes no CSV: {missing_columns}")
+
+        return list(reader)
 
 def load_config():
-    """Carrega o arquivo de configuração."""
-    logging.info("Carregando arquivo de configuração.")
-    try:
-        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-        with open(config_path, 'r') as file:
-            config = json.load(file)
-
-        required_keys = [
-            "supabase_url",
-            "supabase_anon_key",
-            "supabase_service_role_key",
-            "csv_file_path",
-            "update_interval_minutes"
-        ]
-
-        for key in required_keys:
-            if key not in config or not config[key]:
-                raise KeyError(f"Chave obrigatória '{key}' ausente ou vazia no arquivo de configuração.")
-
-        return config
-    except Exception as e:
-        logging.error(f"Erro ao carregar config.json: {e}")
-        raise
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    with open(config_path, 'r') as file:
+        return json.load(file)
 
 def connect_to_supabase(config):
-    """Conecta ao Supabase usando as configurações fornecidas."""
-    logging.info("Conectando ao Supabase.")
-    try:
-        client = create_client(config["supabase_url"], config["supabase_service_role_key"])
-        return client
-    except Exception as e:
-        logging.error(f"Erro ao conectar ao Supabase: {e}")
-        raise
+    return create_client(config["supabase_url"], config["supabase_service_role_key"])
 
-def sync_table(supabase, table_name, unique_key, data, transform_func, error_log):
-    """Sincroniza uma tabela no Supabase."""
-    logging.info(f"Sincronizando tabela '{table_name}'.")
-    for i, row in enumerate(data, start=1):
-        try:
-            record = transform_func(row)
-            unique_value = record[unique_key]
-            existing = supabase.table(table_name).select(unique_key).eq(unique_key, unique_value).execute()
-            if not existing.data:
-                supabase.table(table_name).insert(record).execute()
-                logging.info(f"Registro inserido na tabela '{table_name}': {record}")
+def organize_csv_by_table(csv_data):
+    organized_data = defaultdict(list)
+    
+    for row in csv_data:
+        if "Cód" in row:
+            organized_data['cliente'].append(row)
+        if "Núm.contrato" in row:
+            organized_data['contrato'].append(row)
+        if "Código" in row:
+            organized_data['produto'].append(row)
+
+    return organized_data
+
+def fetch_existing_data(supabase):
+    logging.info("Carregando dados existentes do Supabase.")
+
+    cliente_data = supabase.table('cliente').select('*').execute().data
+    contrato_data = supabase.table('contrato').select('*').execute().data
+    produto_data = supabase.table('produto').select('*').execute().data
+
+    return {
+        'cliente': {item['id_siger_cliente']: item for item in cliente_data},
+        'contrato': {item['id_contrato']: item for item in contrato_data},
+        'produto': {item['id_produto_siger']: item for item in produto_data}
+    }
+
+def compare_and_prepare_batches(table_name, csv_data, existing_data, transform_func):
+    new_records = []
+    updated_records = []
+    skipped_records = 0
+
+    for row in csv_data:
+        record = transform_func(row)
+        unique_key = list(existing_data.keys())[0] if existing_data else None
+
+        if unique_key and record[unique_key] in existing_data:
+            existing_record = existing_data[record[unique_key]]
+            if existing_record != record:
+                updated_records.append(record)
             else:
-                logging.info(f"Registro já existe na tabela '{table_name}': {unique_value}")
-        except KeyError as e:
-            error_message = f"Erro: Coluna ausente no registro {i} ({table_name}): {e}"
-            logging.error(error_message)
-            error_log.append({"index": i, "table": table_name, "error": str(e)})
-        except Exception as e:
-            error_message = f"Erro ao sincronizar registro {i} na tabela '{table_name}': {e}"
-            logging.error(error_message)
-            error_log.append({"index": i, "table": table_name, "error": str(e)})
+                skipped_records += 1
+        else:
+            new_records.append(record)
+
+    logging.info(f"Tabela '{table_name}': {len(new_records)} novos, {len(updated_records)} atualizados, {skipped_records} ignorados.")
+    return new_records, updated_records
+
+def sync_batches(supabase, table_name, new_records, updated_records):
+    if new_records:
+        supabase.table(table_name).insert(new_records).execute()
+        logging.info(f"Inseridos {len(new_records)} novos registros em '{table_name}'.")
+    if updated_records:
+        for record in updated_records:
+            unique_key = list(record.keys())[0]
+            supabase.table(table_name).update(record).eq(unique_key, record[unique_key]).execute()
+        logging.info(f"Atualizados {len(updated_records)} registros em '{table_name}'.")
 
 def transform_cliente(row):
-    """Transforma uma linha de CSV em dados do cliente."""
     return {
         "id_siger_cliente": int(row["Cód"].strip()),
         "nome_cliente": row.get("Razão social", "").strip(),
@@ -119,7 +116,6 @@ def transform_cliente(row):
     }
 
 def transform_contrato(row):
-    """Transforma uma linha de CSV em dados do contrato."""
     return {
         "id_contrato": int(row["Núm.contrato"].strip()),
         "id_siger_cliente": int(row["Cód"].strip()),
@@ -130,7 +126,6 @@ def transform_contrato(row):
     }
 
 def transform_produto(row):
-    """Transforma uma linha de CSV em dados do produto."""
     return {
         "id_produto_siger": int(row["Código"].strip()),
         "nome_produto": row["Desc.item"].strip(),
@@ -141,42 +136,36 @@ def transform_produto(row):
     }
 
 def sync_data():
-    """Inicia o processo de sincronização de dados."""
     logging.info("Iniciando sincronização dos dados.")
     start_time = datetime.now()
-    error_log = []
 
     try:
         config = load_config()
         supabase = connect_to_supabase(config)
 
         required_columns = [
-            "Cód", "Razão social", "CNPJ/CPF",  # Cliente
-            "Núm.contrato", "Dt.inc.cont", "Dt.vig.inic", "Dt.vig.final",  # Contrato
-            "Código", "Desc.item", "Descrição"  # Produto
+            "Cód", "Razão social", "CNPJ/CPF",
+            "Núm.contrato", "Dt.inc.cont", "Dt.vig.inic", "Dt.vig.final",
+            "Código", "Desc.item", "Descrição"
         ]
 
         csv_data = load_csv_data(config["csv_file_path"], required_columns)
+        organized_data = organize_csv_by_table(csv_data)
+        existing_data = fetch_existing_data(supabase)
 
-        sync_table(supabase, 'cliente', 'id_siger_cliente', csv_data, transform_cliente, error_log)
-        sync_table(supabase, 'contrato', 'id_contrato', csv_data, transform_contrato, error_log)
-        sync_table(supabase, 'produto', 'id_produto_siger', csv_data, transform_produto, error_log)
+        for table_name, csv_rows in organized_data.items():
+            new_records, updated_records = compare_and_prepare_batches(
+                table_name, csv_rows, existing_data.get(table_name, {}), globals()[f"transform_{table_name}"]
+            )
+            sync_batches(supabase, table_name, new_records, updated_records)
 
         end_time = datetime.now()
         elapsed_time = str(timedelta(seconds=(end_time - start_time).total_seconds()))
-        logging.info(f"Sincronização concluída com sucesso às {end_time}.")
-        logging.info(f"Tempo total de execução: {elapsed_time}.")
+        logging.info(f"Sincronização concluída em {elapsed_time}.")
     except Exception as e:
         logging.error(f"Erro durante a sincronização: {e}")
 
-    # Log final dos erros
-    if error_log:
-        logging.error("Resumo dos erros encontrados:")
-        for error in error_log:
-            logging.error(f"Registro {error['index']} na tabela '{error['table']}': {error['error']}")
-
 def start_service():
-    """Inicializa o serviço de sincronização agendado."""
     config = load_config()
     interval = config["update_interval_minutes"]
     logging.info(f"Serviço iniciado. Atualização programada a cada {interval} minutos.")
@@ -190,6 +179,6 @@ def start_service():
             logging.error(f"Erro no loop de agendamento: {e}")
         time.sleep(1)
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     setup_logging()
     start_service()
